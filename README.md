@@ -25,6 +25,7 @@ Combines the **multi-agent meeting architecture** of [Virtual Lab](https://githu
 | **Structured Logging** | JSONL traces, API call logs, tool execution logs, agent response records |
 | **Scientific Critic** | Automatic review of specialist outputs for correctness and completeness |
 | **Meeting History** | Load previous meetings as context — agents continue where they left off |
+| **Network Resilience** | Auto-retry on connection failure (10 attempts) + checkpoint save for later resume |
 | **Optional Tool Downloads** | Git submodules + setup scripts — choose what you need, core repo ~1 MB |
 
 ![Meeting Flow](figures/meeting_flow.png)
@@ -217,6 +218,7 @@ Virtual Lab> /demo                # Run demo pipeline
 python run.py --agenda "Find insulin proteins and their 3D structures"
 python run.py --provider openai --demo
 python run.py --context meetings/01_planning.json --agenda "Continue..."
+python run.py --resume meetings/meeting.checkpoint.json  # Resume after network interruption
 ```
 
 ### 5.3 Python API

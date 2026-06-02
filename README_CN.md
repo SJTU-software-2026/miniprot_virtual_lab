@@ -25,6 +25,7 @@
 | **结构化日志** | JSONL 事件流、API 追踪、工具追踪、智能体发言记录 |
 | **科学审稿人** | 自动审查专家输出，检查正确性和完整性 |
 | **会议历史** | 加载之前的会议作为上下文，智能体可继续之前的工作 |
+| **网络韧性** | 连接失败自动重试（10 次）+ 中断时保存 checkpoint 供后续恢复 |
 | **工具按需下载** | Git submodule + 安装脚本，核心项目仅 ~1 MB |
 
 ![会议流程](figures/meeting_flow.png)
@@ -211,6 +212,7 @@ Virtual Lab> /demo                # 运行演示
 python run.py --agenda "寻找胰岛素蛋白及其三维结构"
 python run.py --provider openai --demo
 python run.py --context meetings/01_planning.json --agenda "继续之前的项目..."
+python run.py --resume meetings/meeting.checkpoint.json  # 网络中断后恢复会议
 ```
 
 ### 5.3 Python API
