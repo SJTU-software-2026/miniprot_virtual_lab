@@ -36,13 +36,14 @@ Combines the **multi-agent meeting architecture** of [Virtual Lab](https://githu
 ```bash
 git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
 cd miniprot_virtual_lab
+pip install -r requirements.txt
 
 # 1. Configure
 cp config/settings.example.yaml config/settings.yaml
 # Edit settings.yaml — add your API key
 
-# 2. Get tools (pick one)
-docker-compose build                           # Docker — everything included
+# 2. Get tool binaries (pick one)
+docker-compose build                                     # Docker — everything included
 # OR: cp config/tool_paths.example.yaml config/tool_paths.yaml  # Use local tools
 # OR: bash scripts/setup_tools.sh                              # Download to tools_src/
 
@@ -92,16 +93,16 @@ Human Researcher
 
 - Python 3.10+ (3.12 recommended)
 - Git
-- [enzyme_update](https://github.com/SJTU-software-2026/enzyme_update) cloned alongside this repo
 
 ### 4.2 Clone & install
 
 ```bash
-git clone https://github.com/SJTU-software-2026/enzyme_update.git
 git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
 cd miniprot_virtual_lab
 pip install -r requirements.txt
 ```
+
+All bioinformatics tool implementations are vendored in `src/miniprot_virtual_lab/vendor/` — no external enzyme_update clone needed.
 
 ### 4.3 Configure
 
@@ -124,6 +125,8 @@ cp config/settings.example.yaml config/settings.yaml
 
 Switch providers: `export MINIPROT_PROVIDER=openai` (deepseek | openai | sjtu | custom).
 
+> If `settings.yaml` is missing, the program falls back to `settings.example.yaml` and prints a prominent warning reminding you to copy and edit it.
+
 ### 4.4 Tool binaries — four options
 
 Many tools need external binaries (MAFFT, Vina, P2Rank, etc.). Pick one:
@@ -131,9 +134,10 @@ Many tools need external binaries (MAFFT, Vina, P2Rank, etc.). Pick one:
 #### A. Submodules + setup script (lightest)
 
 ```bash
-git submodule update --init tools_src/omegafold        # optional
-bash scripts/setup_tools.sh                              # Linux/macOS
-powershell -File scripts/setup_tools.ps1                 # Windows
+cd miniprot_virtual_lab                                 # must be inside the repo
+git submodule update --init tools_src/omegafold          # optional: OmegaFold
+bash scripts/setup_tools.sh                              # Linux/macOS: P2Rank + Java
+powershell -File scripts/setup_tools.ps1                 # Windows: P2Rank + Java
 ```
 
 Core repo ~1 MB. Tools downloaded on demand.
@@ -295,9 +299,19 @@ Virtual Lab> /team Continue our project  # Agents reference prior discussions
 ```
 
 ```python
-from miniprot_virtual_lab import load_meeting_context, list_saved_meetings
+from miniprot_virtual_lab import load_meeting_context, run_meeting, PRINCIPAL_INVESTIGATOR, DEFAULT_TEAM
+from pathlib import Path
+
 ctx = load_meeting_context("meetings/01_team_planning.json")
-run_meeting(..., summaries=ctx["summaries"], contexts=ctx["contexts"])
+run_meeting(
+    meeting_type="team",
+    agenda="Continue our project with the next steps...",
+    team_lead=PRINCIPAL_INVESTIGATOR,
+    team_members=DEFAULT_TEAM,
+    save_dir=Path("./meetings"),
+    summaries=ctx["summaries"],
+    contexts=ctx["contexts"],
+)
 ```
 
 ---
@@ -351,6 +365,10 @@ miniprot_virtual_lab/
     ├── prompts.py                     # Agent roles, meeting templates
     ├── run_meeting.py                 # Meeting orchestration + context loading
     ├── utils.py                       # Token counting, I/O, cost
+    ├── vendor/                        # Vendored enzyme_update tools (33 implementations)
+    │   ├── tool_runner.py             # ToolManager registry
+    │   ├── tools/                     # All tool .py files
+    │   └── utils/                     # path_utils, pdb_clean, fasta_parser
     └── tools/                         # Tool package (8 categories)
         ├── TOOL_GUIDE.md              # 33-tool reference guide
         ├── bridge.py / schemas.py     # ToolBridge + normalization

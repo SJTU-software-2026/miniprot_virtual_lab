@@ -30,7 +30,6 @@ services:
       - MINIPROT_PROVIDER=${MINIPROT_PROVIDER:-deepseek}
       - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-pro}
       - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-}
-      - ENZYME_UPDATE_SRC=/app/enzyme_update/src
       - PYTHONUNBUFFERED=1
 
     # Mount volumes for persistent data
@@ -41,8 +40,6 @@ services:
       - ./data:/app/data
       - ./meetings:/app/meetings
       - ./logs:/app/logs
-      # enzyme_update — mount from host
-      - ${ENZYME_UPDATE_PATH:-../enzyme_update}:/app/enzyme_update:ro
 
     # Interactive terminal
     stdin_open: true

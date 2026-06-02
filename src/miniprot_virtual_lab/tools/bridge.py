@@ -1,8 +1,8 @@
 """
 ToolBridge — connects Virtual Lab agents to MiniProt's ToolManager.
 
-Lazy-imports enzyme_update's ToolManager, provides safe tool execution
-with artifact tracking, and filters tools by agent category.
+Imports ToolManager from the vendored copy of enzyme_update tools
+(src/miniprot_virtual_lab/vendor/). No external enzyme_update clone needed.
 """
 
 import logging
@@ -16,65 +16,34 @@ from .schemas import normalize_schema
 
 logger = logging.getLogger(__name__)
 
-# ── Lazy import of MiniProt's ToolManager ──────────────────────────
+# ── Import ToolManager from vendored copy ──────────────────────────
 
 _TOOL_MANAGER = None
-_ENZYME_UPDATE_PATH: Optional[str] = None
-
-
-def _find_enzyme_update() -> Optional[str]:
-    """Locate the enzyme_update directory relative to this project."""
-    candidates = []
-
-    # 1. Same parent directory (relative to this project)
-    project_root = Path(__file__).resolve().parents[3]  # → miniprot_virtual_lab/
-    enzyme_path = project_root.parent / "enzyme_update" / "src"
-    candidates.append(str(enzyme_path))
-
-    # 2. Environment variable
-    env_path = os.getenv("ENZYME_UPDATE_SRC", "").strip()
-    if env_path:
-        candidates.append(env_path)
-
-    # 3. Relative sibling
-    from_project_root = project_root.parent / "enzyme_update" / "src"
-    if from_project_root != enzyme_path:
-        candidates.append(str(from_project_root))
-
-    for cand in candidates:
-        if os.path.isdir(cand):
-            return cand
-    return None
 
 
 def _import_tool_manager() -> Any:
-    """Lazy-import ToolManager from enzyme_update."""
-    global _TOOL_MANAGER, _ENZYME_UPDATE_PATH
+    """Import ToolManager from vendored enzyme_update tools."""
+    global _TOOL_MANAGER
 
     if _TOOL_MANAGER is not None:
         return _TOOL_MANAGER
 
-    src_path = _find_enzyme_update()
-    if src_path is None:
-        raise ImportError(
-            "Cannot find enzyme_update/src. "
-            "Set ENZYME_UPDATE_SRC=/path/to/enzyme_update/src "
-            "or place enzyme_update next to miniprot_virtual_lab."
-        )
-
-    _ENZYME_UPDATE_PATH = src_path
-    if src_path not in sys.path:
-        sys.path.insert(0, src_path)
+    # Ensure vendor/ is on sys.path so tools can do:
+    #   from utils.path_utils import workspace_root
+    vendor_dir = str(Path(__file__).resolve().parents[1] / "vendor")
+    if vendor_dir not in sys.path:
+        sys.path.insert(0, vendor_dir)
 
     try:
-        from tool_runner import ToolManager
+        # Import from vendored copy (vendor/tool_runner.py)
+        from ..vendor.tool_runner import ToolManager
         _TOOL_MANAGER = ToolManager
-        logger.info("ToolManager loaded from %s", src_path)
+        logger.info("ToolManager loaded from vendored copy")
         return ToolManager
     except ImportError as e:
         raise ImportError(
-            f"Found enzyme_update at {src_path} but cannot import ToolManager. "
-            f"Ensure all dependencies are installed: {e}"
+            f"Cannot import ToolManager from vendored tools. "
+            f"Ensure vendor/ directory is intact: {e}"
         ) from e
 
 
