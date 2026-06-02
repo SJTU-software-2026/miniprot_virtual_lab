@@ -34,24 +34,73 @@
 
 ## 2. 快速开始
 
+### 2.1 最小安装（API 工具立即可用）
+
 ```bash
 git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
 cd miniprot_virtual_lab
 pip install -r requirements.txt
 
-# 1. 配置
+# 配置 API Key
 cp config/settings.example.yaml config/settings.yaml
-# 编辑 settings.yaml — 填入 API Key
+# 编辑 settings.yaml → 填入 api_key（DeepSeek 或 OpenAI）
 
-# 2. 获取工具二进制（任选一种）
-docker-compose build                                     # Docker — 全部预装
-# 或: cp config/tool_paths.example.yaml config/tool_paths.yaml  # 指向本地工具
-# 或: bash scripts/setup_tools.sh                              # 下载到 tools_src/
-
-# 3. 运行
+# 运行 — 14 个基于 API 的工具无需额外安装：
 python run.py --demo
 python run.py                          # 交互模式
 ```
+
+> **开箱即用的 14 个工具：** `uniprot_search`、`ncbi_search`、`alphafold`、`pdb`、`smiles`、`hmmer`、`protein_properties`、`similarity_matrix`、`fasta_convert`、`merger`、`pdb_merge`、`structure_from_fasta`、`structure_alignment_batch`、`sequence_length_filter`。
+
+### 2.2 安装工具二进制（对接、比对等需要）
+
+其余 19 个工具需要外部二进制文件。**任选一种方式：**
+
+| 方式 | 获取内容 | 占用空间 |
+|------|---------|---------|
+| **Docker** | 25+ 工具预装 | ~4 GB |
+| **下载脚本** | P2Rank、OmegaFold、Java 17 | ~450 MB |
+| **本地路径** | 指向你已安装的工具 | 0 |
+
+**Docker（全部预装）：**
+```bash
+docker-compose build      # 首次约 10 分钟
+docker-compose run --rm miniprot-vlab python run.py --demo
+```
+
+**下载脚本（按需下载）：**
+```bash
+# P2Rank — 结合位点预测（~260 MB）
+bash tools_src/p2rank/download_p2rank.sh          # Linux/macOS
+powershell -File tools_src/p2rank/download_p2rank.ps1  # Windows
+
+# OmegaFold — 结构预测（~5 MB）
+git submodule update --init tools_src/omegafold
+
+# Java 17 — P2Rank 依赖（~180 MB）
+# 下载地址：https://adoptium.net/download/
+# 或 conda install -c conda-forge openjdk=17
+```
+
+下载后，告诉 MiniProt 工具在哪里：
+```bash
+cp config/tool_paths.example.yaml config/tool_paths.yaml
+# 编辑 tool_paths.yaml → 填入下载的工具路径
+```
+
+> **注意：** 工具二进制是**可选的**。如果只需要 UniProt 搜索、AlphaFold 结构或化合物查询，直接跳到 2.3。需要对接、比对或建树时再下载。
+
+### 2.3 运行
+
+```bash
+# 交互模式（自选任务）：
+python run.py
+
+# 演示流水线（需要 P2Rank + Vina — 请先安装二进制，见 2.2）：
+python run.py --demo
+```
+
+> `--demo` 演示会尝试对接工具。如果未安装二进制，这些步骤会优雅地报告缺少什么。使用交互模式可选择匹配已安装工具的任务。
 
 ---
 

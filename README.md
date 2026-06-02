@@ -34,24 +34,75 @@ Combines the **multi-agent meeting architecture** of [Virtual Lab](https://githu
 
 ## 2. Quick Start
 
+### 2.1 Minimal setup (API tools work immediately)
+
 ```bash
 git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
 cd miniprot_virtual_lab
 pip install -r requirements.txt
 
-# 1. Configure
+# Configure your API key
 cp config/settings.example.yaml config/settings.yaml
-# Edit settings.yaml — add your API key
+# Edit settings.yaml → fill in api_key (DeepSeek or OpenAI)
 
-# 2. Get tool binaries (pick one)
-docker-compose build                                     # Docker — everything included
-# OR: cp config/tool_paths.example.yaml config/tool_paths.yaml  # Use local tools
-# OR: bash scripts/setup_tools.sh                              # Download to tools_src/
-
-# 3. Run
+# Run — 14 API-based tools work right now:
 python run.py --demo
 python run.py                          # Interactive mode
 ```
+
+> **14 tools work out of the box:** `uniprot_search`, `ncbi_search`, `alphafold`, `pdb`, `smiles`, `hmmer`, `protein_properties`, `similarity_matrix`, `fasta_convert`, `merger`, `pdb_merge`, `structure_from_fasta`, `structure_alignment_batch`, `sequence_length_filter`.
+
+### 2.2 Install tool binaries (for docking, alignment, etc.)
+
+The remaining 19 tools need external binaries. **Pick one method:**
+
+| Method | What you get | Disk space |
+|--------|-------------|------------|
+| **Docker** | 25+ tools pre-installed | ~4 GB |
+| **Download scripts** | P2Rank, OmegaFold, Java 17 | ~450 MB |
+| **Local paths** | Point to tools you already have | 0 |
+
+**Docker (all-in-one):**
+```bash
+docker-compose build      # first time ~10 min
+docker-compose run --rm miniprot-vlab python run.py --demo
+```
+
+**Download scripts (pick what you need):**
+```bash
+# P2Rank — binding site prediction (~260 MB)
+bash tools_src/p2rank/download_p2rank.sh          # Linux/macOS
+powershell -File tools_src/p2rank/download_p2rank.ps1  # Windows
+
+# OmegaFold — structure prediction (~5 MB)
+git submodule update --init tools_src/omegafold
+
+# Java 17 — required by P2Rank (~180 MB)
+# Download from https://adoptium.net/download/ or
+# conda install -c conda-forge openjdk=17
+```
+
+After downloading, tell MiniProt where the tools are:
+```bash
+cp config/tool_paths.example.yaml config/tool_paths.yaml
+# Edit tool_paths.yaml → fill in paths to downloaded tools
+```
+
+> **Note:** Tool binaries are **optional**. If you only need UniProt search, AlphaFold structures, or compound lookup, skip to step 2.3. Download binaries later when you need docking, alignment, or tree-building.
+
+### 2.3 Run
+
+```bash
+# Interactive mode (choose your own tasks):
+python run.py
+
+# Demo pipeline (needs P2Rank + Vina — install binaries first, see 2.2):
+python run.py --demo
+```
+
+> The `--demo` pipeline tries docking tools. Without binaries installed,
+> those steps will gracefully report what's missing. Use interactive mode
+> to pick tasks that match your installed tools.
 
 ---
 

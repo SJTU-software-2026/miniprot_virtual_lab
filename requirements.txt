@@ -1,31 +1,50 @@
 # MiniProt Virtual Lab — Dependencies
 # =====================================
+#   pip install -r requirements.txt
+#
+# Heavy packages (~3 GB total, mostly torch):
+#   torch, transformers, chromadb, sentence-transformers
+# Skip them if you don't need: ESMFold, OmegaFold, MiniProt RAG.
+# All other tools work without them.
 
-# Core: LLM client (OpenAI-compatible; works with DeepSeek, OpenAI, etc.)
+# ── Core (always needed) ───────────────────────────────────────────
 openai>=1.0.0
 python-dotenv>=1.0.0
-
-# YAML configuration file support (for config/settings.yaml)
 pyyaml>=6.0
-
-# Token counting (optional; falls back to char/4 estimate)
 tiktoken>=0.5.0
-
-# Progress bars
 tqdm>=4.66.0
+requests>=2.32.0
 
-# Architecture diagram generation (optional)
+# ── Scientific computing ───────────────────────────────────────────
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
 matplotlib>=3.7.0
 
-# ── MiniProt tools (from enzyme_update) ──────────────────────────
-# Required for tool execution in individual meetings.
-# Install in the same environment:
-#
-#   pip install -r ../enzyme_update/requirements.txt
-#
-# Key dependencies include:
-#   langchain-core>=0.3.0, langchain-openai>=0.2.0, langgraph>=0.2.0
-#   biopython>=1.81, rdkit>=2024.03.1, numpy, pandas, scipy
-#   pdbfixer, openmm, meeko>=0.5.0
-#   streamlit>=1.28.0, sentence-transformers, chromadb
-#   torch>=2.0.0, transformers>=4.30.0
+# ── Bioinformatics ─────────────────────────────────────────────────
+biopython>=1.81
+rdkit>=2024.03.1
+pdbfixer
+openmm
+meeko>=0.5.0
+
+# ── LangChain stack (agent orchestration, schema handling) ─────────
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+langgraph>=0.2.0
+langchain-text-splitters>=0.3.0
+langchain-community>=0.3.0
+
+# ── Phylogenetics ──────────────────────────────────────────────────
+ete3>=3.1.0
+
+# ── ML / DL (optional — skip if not using ESMFold/OmegaFold/RAG) ──
+torch>=2.0.0
+transformers>=4.30.0
+sentencepiece>=0.1.99
+protobuf>=3.20.0
+chromadb>=0.5.0
+sentence-transformers>=2.2.0
+
+# ── Web UI (optional — skip if not using Streamlit) ─────────────────
+streamlit>=1.28.0
