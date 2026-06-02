@@ -31,20 +31,27 @@ import json
 import logging
 import os
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
-from openai import OpenAI
+from openai import OpenAI, APIConnectionError, APITimeoutError, InternalServerError
 
 from .agent import Agent
 from .config import resolve_config, ResolvedConfig
 
 logger = logging.getLogger(__name__)
 
+# ── Network retry config ────────────────────────────────────────────
+
+MAX_RETRIES = 10
+RETRY_DELAY_S = 5       # seconds between retries
+RETRYABLE_ERRORS = (APIConnectionError, APITimeoutError, InternalServerError,
+                    ConnectionError, TimeoutError, OSError)
+
 # ── Per-agent OpenAI client cache ───────────────────────────────────
 
-# Keyed by (api_key_hash, base_url) to reuse clients with same config
 _CLIENT_CACHE: Dict[Tuple[int, str], OpenAI] = {}
 
 
@@ -70,20 +77,20 @@ def _call_llm(
     max_tokens: int = 2048,
     extra_body: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, int, int, int]:
-    """Call the LLM API and return (content, input_tokens, output_tokens, latency_ms).
+    """Call the LLM API with retry on network failure.
 
-    Args:
-        config: Resolved API configuration.
-        messages: Message list (role: system/user/assistant).
-        temperature: Sampling temperature.
-        max_tokens: Max completion tokens.
-        extra_body: Optional extra body params.
+    Retries up to MAX_RETRIES times with RETRY_DELAY_S between attempts.
+    On transient errors (connection, timeout, server), waits and retries.
+    On permanent errors (auth, bad request), fails immediately.
 
     Returns:
         (response_text, input_token_count, output_token_count, latency_ms)
+
+    Raises:
+        NetworkExhaustedError: After MAX_RETRIES consecutive network failures.
     """
+    last_error = None
     client = _get_client_for(config)
-    t0 = time.perf_counter()
 
     kwargs: Dict[str, Any] = {
         "model": config.model,
@@ -95,17 +102,60 @@ def _call_llm(
     if effective_extra:
         kwargs["extra_body"] = effective_extra
 
-    response = client.chat.completions.create(**kwargs)
-    latency_ms = int((time.perf_counter() - t0) * 1000)
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            t0 = time.perf_counter()
+            response = client.chat.completions.create(**kwargs)
+            latency_ms = int((time.perf_counter() - t0) * 1000)
 
-    content = response.choices[0].message.content or ""
+            content = response.choices[0].message.content or ""
+            usage = response.usage
+            input_tokens = usage.prompt_tokens if usage else 0
+            output_tokens = usage.completion_tokens if usage else 0
 
-    # Extract token counts from API response
-    usage = response.usage
-    input_tokens = usage.prompt_tokens if usage else 0
-    output_tokens = usage.completion_tokens if usage else 0
+            if attempt > 1:
+                logger.info("API call succeeded on attempt %d after %d retries",
+                            attempt, attempt - 1)
+            return content, input_tokens, output_tokens, latency_ms
 
-    return content, input_tokens, output_tokens, latency_ms
+        except RETRYABLE_ERRORS as e:
+            last_error = e
+            if attempt < MAX_RETRIES:
+                logger.warning(
+                    "API call failed (attempt %d/%d): %s — retrying in %ds...",
+                    attempt, MAX_RETRIES, _error_summary(e), RETRY_DELAY_S,
+                )
+                time.sleep(RETRY_DELAY_S)
+            else:
+                logger.error(
+                    "API call exhausted all %d retries: %s",
+                    MAX_RETRIES, _error_summary(e),
+                )
+
+        except Exception as e:
+            # Non-retryable error (auth, bad request, etc.) — fail immediately
+            raise RuntimeError(
+                f"API call failed with non-retryable error: {_error_summary(e)}"
+            ) from e
+
+    # All retries exhausted
+    raise NetworkExhaustedError(
+        f"Network unreachable after {MAX_RETRIES} attempts "
+        f"(last error: {_error_summary(last_error)})"
+    )
+
+
+def _error_summary(e: BaseException) -> str:
+    """Short error description for logging."""
+    msg = str(e).replace("\n", " ")
+    if len(msg) > 120:
+        msg = msg[:117] + "..."
+    return f"{type(e).__name__}: {msg}"
+
+
+class NetworkExhaustedError(RuntimeError):
+    """Raised when all API retries are exhausted due to network issues."""
+    pass
 
 
 # ── Tool execution helpers ─────────────────────────────────────────
@@ -252,6 +302,63 @@ def _execute_tool_loop(
         )
     messages.append({"role": "assistant", "content": content})
     return content, tool_log, total_tool_tokens
+
+
+# ── Checkpoint save / resume ────────────────────────────────────────
+
+def _save_checkpoint(
+    save_dir: Path,
+    save_name: str,
+    meeting_type: str,
+    discussion: List[Dict[str, str]],
+    messages: List[Dict[str, str]],
+    num_rounds: int,
+    agenda: str,
+) -> Path:
+    """Save the current meeting state so it can be resumed after network recovery.
+
+    Returns the path to the checkpoint file.
+    """
+    save_dir.mkdir(parents=True, exist_ok=True)
+    cp_path = save_dir / f"{save_name}.checkpoint.json"
+
+    cp = {
+        "meeting_type": meeting_type,
+        "save_name": save_name,
+        "agenda": agenda,
+        "num_rounds": num_rounds,
+        "discussion": discussion,
+        "messages": messages,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    with open(cp_path, "w", encoding="utf-8") as f:
+        json.dump(cp, f, indent=2, ensure_ascii=False)
+
+    logger.info("Checkpoint saved: %s", cp_path)
+    return cp_path
+
+
+def load_checkpoint(checkpoint_path: str) -> Optional[dict]:
+    """Load a saved meeting checkpoint.
+
+    Returns dict with meeting_type, save_name, agenda, num_rounds,
+    discussion, messages, or None if the file doesn't exist.
+    """
+    p = Path(checkpoint_path)
+    if not p.exists():
+        return None
+
+    with open(p, "r", encoding="utf-8") as f:
+        cp = json.load(f)
+
+    required = {"meeting_type", "discussion", "messages"}
+    if not required.issubset(cp.keys()):
+        logger.warning("Checkpoint %s missing required keys", checkpoint_path)
+        return None
+
+    logger.info("Checkpoint loaded: %s (%d discussion turns, %d messages)",
+                checkpoint_path, len(cp["discussion"]), len(cp["messages"]))
+    return cp
 
 
 # ── Main meeting function ──────────────────────────────────────────
@@ -595,6 +702,55 @@ def run_meeting(
                     purpose="agent_revision",
                 )
 
+    # ── Execute meeting body (with network error recovery) ──────
+    try:
+        _run_meeting_body(
+            meeting_type, agenda, save_dir, save_name,
+            team_lead, team_members, team_member,
+            agenda_questions, agenda_rules, summaries, contexts,
+            num_rounds, temperature, enable_tools,
+            run_logger, provider_name,
+            discussion, messages, agent_configs,
+        )
+    except NetworkExhaustedError as e:
+        # Save checkpoint so user can resume after network recovery
+        cp_path = _save_checkpoint(
+            save_dir, save_name, meeting_type,
+            discussion, messages, num_rounds, agenda,
+        )
+        elapsed_s = time.time() - start_time
+        print(f"\n{'!' * 60}")
+        print(f"  NETWORK ERROR — meeting interrupted after {elapsed_s:.0f}s")
+        print(f"  {e}")
+        print()
+        print(f"  Your progress has been saved to:")
+        print(f"    {cp_path}")
+        print()
+        print(f"  To RESUME after network recovery:")
+        print(f"    python run.py --resume {cp_path}")
+        print()
+        print(f"  Or in interactive mode:")
+        print(f"    Virtual Lab> /resume {cp_path}")
+        print(f"{'!' * 60}\n")
+
+        if run_logger:
+            run_logger.log_error("network", str(e))
+            run_logger._emit("checkpoint_saved", {"path": str(cp_path)})
+            run_logger.finalize()
+
+        # Also save whatever discussion we have as partial meeting record
+        from .utils import get_summary
+        partial_name = f"{save_name}_INTERRUPTED"
+        try:
+            from .utils import save_meeting
+            save_meeting(save_dir, partial_name, discussion)
+        except Exception:
+            pass
+
+        if return_summary:
+            return get_summary(discussion) if discussion else "Meeting interrupted by network error."
+        return None
+
     # ── Finalize ───────────────────────────────────────────────
     elapsed_s = time.time() - start_time
 
@@ -604,7 +760,6 @@ def run_meeting(
     token_counts = count_discussion_tokens(discussion)
     token_counts["tool"] = tool_token_count
 
-    # Use the first agent's model for cost display
     display_model = list(agent_configs.values())[0].model if agent_configs else "unknown"
 
     print(f"\n{'─' * 50}")
@@ -632,6 +787,233 @@ def run_meeting(
         return get_summary(discussion)
 
     return None
+
+
+def _run_meeting_body(
+    meeting_type, agenda, save_dir, save_name,
+    team_lead, team_members, team_member,
+    agenda_questions, agenda_rules, summaries, contexts,
+    num_rounds, temperature, enable_tools,
+    run_logger, provider_name,
+    discussion, messages, agent_configs,
+) -> None:
+    """Inner function containing the actual meeting logic.
+
+    Separated so NetworkExhaustedError can be caught and checkpointed
+    without losing the meeting state accumulated so far.
+    """
+    from .prompts import (
+        SCIENTIFIC_CRITIC,
+        team_meeting_start_prompt,
+        team_meeting_team_lead_initial_prompt,
+        team_meeting_team_member_prompt,
+        team_meeting_team_lead_intermediate_prompt,
+        team_meeting_team_lead_final_prompt,
+        individual_meeting_start_prompt,
+        individual_meeting_critic_prompt,
+        individual_meeting_agent_revise_prompt,
+    )
+
+    tool_token_count = 0
+    bridge = None
+    if enable_tools and meeting_type == "individual":
+        try:
+            from .tools import ToolBridge
+            bridge = ToolBridge()
+            logger.info("ToolBridge initialized")
+        except ImportError as e:
+            logger.warning("ToolBridge unavailable: %s", e)
+            if run_logger:
+                run_logger.log_warning("setup", f"ToolBridge unavailable: {e}")
+
+    # ── Team meeting ──────────────────────────────────────────
+    if meeting_type == "team":
+        assert team_lead is not None and team_members is not None
+        team: List[Agent] = [team_lead] + list(team_members)
+
+        start_content = team_meeting_start_prompt(
+            team_lead=team_lead, team_members=team_members,
+            agenda=agenda, agenda_questions=agenda_questions,
+            agenda_rules=agenda_rules, summaries=summaries,
+            contexts=contexts, num_rounds=num_rounds,
+        )
+        messages.append({"role": "user", "content": start_content})
+        discussion.append({"agent": "User", "message": start_content})
+
+        for round_idx in range(num_rounds + 1):
+            round_num = round_idx + 1
+            for agent in team:
+                if agent == team_lead:
+                    if round_idx == 0:
+                        prompt = team_meeting_team_lead_initial_prompt(team_lead)
+                    elif round_idx == num_rounds:
+                        prompt = team_meeting_team_lead_final_prompt(
+                            team_lead=team_lead, agenda=agenda,
+                            agenda_questions=agenda_questions,
+                            agenda_rules=agenda_rules,
+                        )
+                    else:
+                        prompt = team_meeting_team_lead_intermediate_prompt(
+                            team_lead=team_lead, round_num=round_num - 1,
+                            num_rounds=num_rounds,
+                        )
+                else:
+                    prompt = team_meeting_team_member_prompt(
+                        team_member=agent, round_num=round_num,
+                        num_rounds=num_rounds,
+                    )
+
+                messages.append({"role": "user", "content": prompt})
+                discussion.append({"agent": "User", "message": prompt})
+
+                agent_messages = [agent.system_message] + messages
+                cfg = agent_configs[agent.title]
+                temp = agent.temperature if agent.temperature is not None else temperature
+
+                content, in_tok, out_tok, lat_ms = _call_llm(
+                    cfg, agent_messages, temperature=temp, max_tokens=2048,
+                )
+                if run_logger:
+                    run_logger.log_api_call(
+                        agent=agent.title, model=cfg.model,
+                        input_tokens=in_tok, output_tokens=out_tok,
+                        latency_ms=lat_ms, purpose=f"team_round{round_num}",
+                    )
+                messages.append({"role": "assistant", "content": content})
+                discussion.append({"agent": agent.title, "message": content})
+
+                if run_logger:
+                    run_logger.log_agent_response(
+                        agent=agent.title, content=content,
+                        meeting_name=save_name, round_num=round_num,
+                        purpose="team_discussion",
+                    )
+                if round_idx == num_rounds:
+                    break
+
+    # ── Individual meeting ────────────────────────────────────
+    else:
+        assert team_member is not None
+        agent = team_member
+        cfg = agent_configs[agent.title]
+        temp = agent.temperature if agent.temperature is not None else temperature
+
+        start_content = individual_meeting_start_prompt(
+            team_member=agent, agenda=agenda,
+            agenda_questions=agenda_questions,
+            agenda_rules=agenda_rules,
+            summaries=summaries, contexts=contexts,
+        )
+        messages.append({"role": "user", "content": start_content})
+        discussion.append({"agent": "User", "message": start_content})
+
+        if bridge is not None:
+            response_content, tool_log, tt_tokens = _execute_tool_loop(
+                agent=agent, agent_config=cfg,
+                messages=messages, bridge=bridge,
+                run_logger=run_logger, temperature=temp,
+            )
+            tool_token_count += tt_tokens
+        else:
+            agent_messages = [agent.system_message] + messages
+            content, in_tok, out_tok, lat_ms = _call_llm(
+                cfg, agent_messages, temperature=temp, max_tokens=2048,
+            )
+            if run_logger:
+                run_logger.log_api_call(
+                    agent=agent.title, model=cfg.model,
+                    input_tokens=in_tok, output_tokens=out_tok,
+                    latency_ms=lat_ms, purpose="individual_task",
+                )
+            response_content = content
+            messages.append({"role": "assistant", "content": response_content})
+
+        discussion.append({"agent": agent.title, "message": response_content})
+        if run_logger:
+            run_logger.log_agent_response(
+                agent=agent.title, content=response_content,
+                meeting_name=save_name, round_num=0,
+                purpose="individual_task",
+            )
+
+        # ── Critic review rounds ─────────────────────────────
+        critic = SCIENTIFIC_CRITIC
+        critic_cfg = resolve_config(critic, provider=provider_name)
+
+        for round_num in range(1, num_rounds + 1):
+            critic_prompt = individual_meeting_critic_prompt(
+                critic=critic, agent=agent,
+            )
+            messages.append({"role": "user", "content": critic_prompt})
+            discussion.append({"agent": "User", "message": critic_prompt})
+
+            critic_messages = [critic.system_message] + messages
+            critic_temp = critic.temperature if critic.temperature is not None else temperature
+            critic_content, in_tok, out_tok, lat_ms = _call_llm(
+                critic_cfg, critic_messages, temperature=critic_temp, max_tokens=2048,
+            )
+            if run_logger:
+                run_logger.log_api_call(
+                    agent=critic.title, model=critic_cfg.model,
+                    input_tokens=in_tok, output_tokens=out_tok,
+                    latency_ms=lat_ms, purpose=f"critic_round{round_num}",
+                )
+            messages.append({"role": "assistant", "content": critic_content})
+            discussion.append({"agent": critic.title, "message": critic_content})
+            if run_logger:
+                run_logger.log_agent_response(
+                    agent=critic.title, content=critic_content,
+                    meeting_name=save_name, round_num=round_num,
+                    purpose="critic_review",
+                )
+
+            satisfied = [
+                "no issues", "correct", "looks good", "well done",
+                "no errors", "all good", "satisfied", "complete",
+                "没有问题", "正确", "没问题", "完成得很好",
+            ]
+            if any(ind in critic_content.lower() for ind in satisfied):
+                if not re.search(
+                    r'\b(but|however|although|except|除了|但是|然而|不过)\b',
+                    critic_content, re.IGNORECASE,
+                ):
+                    logger.info("Critic satisfied after round %d", round_num)
+                    if run_logger:
+                        run_logger._emit("critic_satisfied", {"round": round_num})
+                    break
+
+            revise_prompt = individual_meeting_agent_revise_prompt(
+                critic=critic, agent=agent,
+            )
+            messages.append({"role": "user", "content": revise_prompt})
+            discussion.append({"agent": "User", "message": revise_prompt})
+
+            if bridge is not None:
+                revised, tool_log2, tt_tokens2 = _execute_tool_loop(
+                    agent=agent, agent_config=cfg,
+                    messages=messages, bridge=bridge,
+                    run_logger=run_logger, temperature=temp,
+                )
+                tool_token_count += tt_tokens2
+            else:
+                agent_messages = [agent.system_message] + messages
+                revised, in_tok, out_tok, lat_ms = _call_llm(
+                    cfg, agent_messages, temperature=temp, max_tokens=2048,
+                )
+                if run_logger:
+                    run_logger.log_api_call(
+                        agent=agent.title, model=cfg.model,
+                        input_tokens=in_tok, output_tokens=out_tok,
+                        latency_ms=lat_ms, purpose=f"revise_round{round_num}",
+                    )
+            messages.append({"role": "assistant", "content": revised})
+            discussion.append({"agent": agent.title, "message": revised})
+            if run_logger:
+                run_logger.log_agent_response(
+                    agent=agent.title, content=revised,
+                    meeting_name=save_name, round_num=round_num,
+                    purpose="agent_revision",
+                )
 
 
 # ── Meeting history loading ────────────────────────────────────────

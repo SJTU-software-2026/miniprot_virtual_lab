@@ -34,6 +34,7 @@ from miniprot_virtual_lab import (
     run_meeting,
     load_meeting_context,
     list_saved_meetings,
+    load_checkpoint,
     RunLogger,
     resolve_config,
     list_providers,
@@ -475,6 +476,8 @@ def main() -> int:
                         help="Directory for structured logs (default: ./logs/run_<timestamp>).")
     parser.add_argument("--context", "-c", type=str, default=None, nargs="*",
                         help="Load saved meeting JSON file(s) as context for the meeting.")
+    parser.add_argument("--resume", "-r", type=str, default=None,
+                        help="Resume an interrupted meeting from a checkpoint file.")
     parser.add_argument("--model", "-m", type=str, default=None,
                         help="Global model name override.")
     args = parser.parse_args()
@@ -509,6 +512,54 @@ def main() -> int:
 
     print(f"\nSaving meetings to: {save_dir.resolve()}")
     print(f"Logging to:         {_get_logger().log_dir}")
+
+    if args.resume:
+        rl = _get_logger()
+        cp = load_checkpoint(args.resume)
+        if cp is None:
+            print(f"ERROR: Cannot load checkpoint: {args.resume}")
+            return 1
+        print(f"Resuming meeting from checkpoint: {args.resume}")
+        print(f"  Meeting type: {cp['meeting_type']}")
+        print(f"  Discussion turns so far: {len(cp['discussion'])}")
+        print()
+
+        summary_text = "\n".join(
+            f"{t['agent']}: {t['message'][:200]}" for t in cp['discussion'][-6:]
+        )
+        ctx_text = (
+            f"[Previous progress — {len(cp['discussion'])} turns completed "
+            f"before network interruption]\n{summary_text}"
+        )
+
+        if cp['meeting_type'] == 'team':
+            run_meeting(
+                meeting_type='team',
+                agenda=f"CONTINUING INTERRUPTED MEETING:\n\n{cp['agenda']}",
+                team_lead=PRINCIPAL_INVESTIGATOR,
+                team_members=DEFAULT_TEAM,
+                save_dir=session.save_dir,
+                save_name=session.next_meeting_name("resumed"),
+                num_rounds=cp.get('num_rounds', 3),
+                summaries=(summary_text,),
+                contexts=(ctx_text,),
+                run_logger=rl,
+            )
+        else:
+            run_meeting(
+                meeting_type='individual',
+                agenda=f"CONTINUING INTERRUPTED TASK:\n\n{cp['agenda']}",
+                team_member=PROTEIN_SEARCH_SPECIALIST,
+                save_dir=session.save_dir,
+                save_name=session.next_meeting_name("resumed"),
+                num_rounds=cp.get('num_rounds', 1),
+                summaries=(summary_text,),
+                contexts=(ctx_text,),
+                enable_tools=True,
+                run_logger=rl,
+            )
+        rl.finalize()
+        return 0
 
     if args.demo:
         run_enzyme_mining_demo(session)

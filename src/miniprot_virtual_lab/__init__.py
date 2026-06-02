@@ -55,7 +55,7 @@ from .prompts import (
     DEFAULT_TEAM,
     SEARCH_TEAM,
 )
-from .run_meeting import run_meeting, load_meeting_context, list_saved_meetings
+from .run_meeting import run_meeting, load_meeting_context, list_saved_meetings, load_checkpoint, NetworkExhaustedError
 from .constants import ENZYME_MINING_REFERENCE_WORKFLOW
 from .tools import (
     ToolBridge, get_bridge,
@@ -69,6 +69,8 @@ __all__ = [
     "run_meeting",
     "load_meeting_context",
     "list_saved_meetings",
+    "load_checkpoint",
+    "NetworkExhaustedError",
     "RunLogger",
     # Config
     "resolve_config",
