@@ -1,11 +1,13 @@
 """
 Tools package for MiniProt Virtual Lab.
 
-Each subdirectory represents a tool category. Each category's __init__.py
-defines a TOOLS dict with metadata for every tool in that category.
-
-The TOOL_REGISTRY (built at import time) aggregates all tools across
-all categories, providing a single lookup point for tool metadata.
+Contains:
+  - Tool implementations (33 _tool.py files — the actual bioinformatics tools)
+  - ToolBridge (bridge.py) — safe execution + artifact tracking
+  - Schema normalization (schemas.py)
+  - Local tool path resolver (tool_paths.py)
+  - Category metadata subpackages (search, structure, chemistry, etc.)
+  - TOOL_GUIDE.md — complete reference
 
 Usage:
     from miniprot_virtual_lab.tools import ToolBridge, get_bridge, TOOL_REGISTRY
@@ -13,7 +15,6 @@ Usage:
     bridge = get_bridge()
     tools = bridge.list_tools()
     meta = TOOL_REGISTRY.get("uniprot_search", {})
-    print(meta["primary_agent"])  # → "Protein Search Specialist"
 """
 
 from .bridge import ToolBridge, get_bridge
@@ -68,14 +69,13 @@ for mod in _CATEGORY_MODULES:
 # ── Tool availability status ───────────────────────────────────────
 # Status: "api" = works via online API (always available)
 #         "docker" = binary pre-installed in Docker image
-#         "manual" = needs manual binary install (conda/pip)
-#         "unavailable" = needs license/model/env that is not bundled
-#
-# Tested: 2025-06-02
+#         "available" = tested and working locally
+#         "manual" = needs manual install
+#         "unavailable" = needs license/model/env not bundled
 
 TOOL_STATUS: dict = {}
 for tid in TOOL_REGISTRY:
-    TOOL_STATUS[tid] = "manual"  # default
+    TOOL_STATUS[tid] = "manual"
 
 # API-based tools (tested and working)
 for tid in ("uniprot_search", "ncbi_search", "alphafold", "pdb",
@@ -89,18 +89,17 @@ for tid in ("protein_properties", "sequence_length_filter",
             "structure_alignment_batch"):
     TOOL_STATUS[tid] = "api"
 
-# Locally verified (tested on Windows 2025-06-02)
+# Locally verified
 for tid in ("pocket_picker",):
     TOOL_STATUS[tid] = "available"
 
 # Docker-installed (binary via conda in Dockerfile)
 for tid in ("sequence_alignment", "mmseqs2", "cdhit", "foldseek",
             "tmalign", "autodock_vina", "pocket_box", "pdb_repair",
-            "pymol", "ete", "omegafold", "esmfold",
-            "miniprot_rag"):
+            "pymol", "ete", "omegafold", "esmfold", "miniprot_rag"):
     TOOL_STATUS[tid] = "docker"
 
-# Unavailable (needs license, model file, or separate env)
+# Unavailable (needs license, model, or separate env)
 for tid in ("enzyme_specificity_predict", "enzymecage_retrieve",
             "enzyme_redesign"):
     TOOL_STATUS[tid] = "unavailable"

@@ -99,7 +99,7 @@ cd miniprot_virtual_lab
 pip install -r requirements.txt
 ```
 
-所有生信工具实现已内置在 `src/miniprot_virtual_lab/vendor/` — 无需额外克隆 enzyme_update。
+所有生信工具实现已内置在 `src/miniprot_virtual_lab/tools/` — 无需额外克隆。
 
 ### 4.3 配置
 
@@ -357,15 +357,18 @@ miniprot_virtual_lab/
     ├── logging_config.py              # 结构化日志
     ├── prompts.py                     # 智能体角色、会议模板
     ├── run_meeting.py                 # 会议编排 + 上下文加载
-    ├── utils.py                       # Token、费用、I/O
-    ├── vendor/                        # 内置 enzyme_update 工具（33 个实现）
-    │   ├── tool_runner.py             # ToolManager 注册中心
-    │   ├── tools/                     # 全部工具 .py 文件
-    │   └── utils/                     # path_utils, pdb_clean, fasta_parser
-    └── tools/                         # 工具包（8 类别）
+    ├── tool_runner.py                 # ToolManager 注册中心
+    ├── utils/                         # 共享工具函数
+    │   ├── __init__.py                # Token、费用、I/O（原 utils.py）
+    │   ├── path_utils.py              # 工作空间路径
+    │   ├── pdb_clean.py               # PDB 清洗（对接用）
+    │   ├── pdb_utils.py               # PDB 获取工具
+    │   └── fasta_parser.py            # FASTA 解析与合并
+    └── tools/                         # 工具包（33 个实现 + 8 类别）
         ├── TOOL_GUIDE.md              # 33 工具参考指南
         ├── bridge.py / schemas.py     # ToolBridge + 归一化
         ├── tool_paths.py              # 本地路径解析
+        ├── *_tool.py                  # 33 个生信工具实现
         └── {search,structure,chemistry,docking,
              sequence,visualization,utility,specialized}/
 ```

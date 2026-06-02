@@ -102,7 +102,7 @@ cd miniprot_virtual_lab
 pip install -r requirements.txt
 ```
 
-All bioinformatics tool implementations are vendored in `src/miniprot_virtual_lab/vendor/` — no external enzyme_update clone needed.
+All bioinformatics tool implementations are included in `src/miniprot_virtual_lab/tools/` — no external clone needed.
 
 ### 4.3 Configure
 
@@ -364,15 +364,18 @@ miniprot_virtual_lab/
     ├── logging_config.py              # Structured logging (RunLogger)
     ├── prompts.py                     # Agent roles, meeting templates
     ├── run_meeting.py                 # Meeting orchestration + context loading
-    ├── utils.py                       # Token counting, I/O, cost
-    ├── vendor/                        # Vendored enzyme_update tools (33 implementations)
-    │   ├── tool_runner.py             # ToolManager registry
-    │   ├── tools/                     # All tool .py files
-    │   └── utils/                     # path_utils, pdb_clean, fasta_parser
-    └── tools/                         # Tool package (8 categories)
+    ├── tool_runner.py                 # ToolManager registry
+    ├── utils/                         # Shared utilities
+    │   ├── __init__.py                # Token counting, cost, I/O (was utils.py)
+    │   ├── path_utils.py              # Workspace paths
+    │   ├── pdb_clean.py               # PDB cleaning for docking
+    │   ├── pdb_utils.py               # PDB fetch utilities
+    │   └── fasta_parser.py            # FASTA parsing and merging
+    └── tools/                         # Tool package (33 implementations + 8 categories)
         ├── TOOL_GUIDE.md              # 33-tool reference guide
         ├── bridge.py / schemas.py     # ToolBridge + normalization
         ├── tool_paths.py              # Local tool path resolver
+        ├── *_tool.py                  # 33 bioinformatics tool implementations
         └── {search,structure,chemistry,docking,sequence,visualization,utility,specialized}/
 ```
 

@@ -22,28 +22,27 @@ _TOOL_MANAGER = None
 
 
 def _import_tool_manager() -> Any:
-    """Import ToolManager from vendored enzyme_update tools."""
+    """Import ToolManager from the built-in tool implementations."""
     global _TOOL_MANAGER
 
     if _TOOL_MANAGER is not None:
         return _TOOL_MANAGER
 
-    # Ensure vendor/ is on sys.path so tools can do:
+    # Ensure the package root is on sys.path so tool files can do:
+    #   from tools.uniprot_tool import UniProtTool
     #   from utils.path_utils import workspace_root
-    vendor_dir = str(Path(__file__).resolve().parents[1] / "vendor")
-    if vendor_dir not in sys.path:
-        sys.path.insert(0, vendor_dir)
+    pkg_dir = str(Path(__file__).resolve().parents[1])  # → miniprot_virtual_lab/
+    if pkg_dir not in sys.path:
+        sys.path.insert(0, pkg_dir)
 
     try:
-        # Import from vendored copy (vendor/tool_runner.py)
-        from ..vendor.tool_runner import ToolManager
+        from ..tool_runner import ToolManager
         _TOOL_MANAGER = ToolManager
-        logger.info("ToolManager loaded from vendored copy")
+        logger.info("ToolManager loaded")
         return ToolManager
     except ImportError as e:
         raise ImportError(
-            f"Cannot import ToolManager from vendored tools. "
-            f"Ensure vendor/ directory is intact: {e}"
+            f"Cannot import ToolManager. Ensure tools/ and utils/ are intact: {e}"
         ) from e
 
 
