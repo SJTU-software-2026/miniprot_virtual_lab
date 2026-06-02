@@ -160,7 +160,7 @@ cp config/tool_paths.example.yaml config/tool_paths.yaml
 
 | 工具 | 大小 | 来源 |
 |------|------|------|
-| P2Rank | ~260 MB | https://github.com/rdk/p2rank/releases |
+| P2Rank | ~260 MB | `bash tools_src/p2rank/download_p2rank.sh` 或 https://github.com/rdk/p2rank/releases |
 | OmegaFold | ~5 MB (git) | `git submodule update --init` |
 | OpenJDK 17 | ~180 MB | https://adoptium.net/download/ |
 

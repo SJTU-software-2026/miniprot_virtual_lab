@@ -165,7 +165,7 @@ Download to the gitignored `tools_src/` directory, then configure `tool_paths.ya
 
 | Tool | Size | Source |
 |------|------|--------|
-| P2Rank | ~260 MB | https://github.com/rdk/p2rank/releases |
+| P2Rank | ~260 MB | `bash tools_src/p2rank/download_p2rank.sh` or https://github.com/rdk/p2rank/releases |
 | OmegaFold | ~5 MB (git) | `git submodule update --init` |
 | OpenJDK 17 | ~180 MB | https://adoptium.net/download/ |
 
