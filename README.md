@@ -533,6 +533,24 @@ run_meeting(
 
 Many tools need external binaries (MAFFT, Vina, P2Rank, etc.). You have **three options** — pick what fits your setup:
 
+### Option 0: Clone with submodules
+
+```bash
+# Clone WITHOUT tools (fast, small download)
+git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
+
+# Get OmegaFold submodule (optional)
+git submodule update --init tools_src/omegafold
+
+# Download other tools (optional — P2Rank, Java)
+# Linux/macOS:
+bash scripts/setup_tools.sh
+# Windows:
+powershell -File scripts/setup_tools.ps1
+```
+
+> **You choose what to download.** The core project is ~1 MB. Tools are opt-in via submodules and setup scripts. No large binaries in the main repo.
+
 ### Option 1: Docker (simplest — everything included)
 
 ```bash

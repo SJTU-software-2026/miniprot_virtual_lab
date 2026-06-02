@@ -41,5 +41,13 @@ desktop.ini
 # ── Jupyter ────────────────────────────────────────────────────────
 .ipynb_checkpoints/
 
-# ── Downloaded tool sources (reference only) ───────────────────────
-tools_src/
+# ── Downloaded tool binaries (use submodules + setup script instead) ──
+# tools_src/ is managed via git submodules and scripts/setup_tools.*
+# See tools_src/README.md for download instructions
+tools_src/p2rank/p2rank_*/
+tools_src/p2rank/*.tar.gz
+tools_src/java/*.msi
+tools_src/java/*.zip
+tools_src/java/jdk-*/
+tools_src/omegafold/model*.pt
+tools_src/omegafold/__pycache__/
