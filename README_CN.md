@@ -107,11 +107,33 @@ python run.py --provider openai --demo
 
 ## 安装
 
-### 1. 克隆并安装依赖
+### 方式 A：Docker（推荐 — 所有工具预装）
+
+Docker 镜像包含 Python 3.12 + **25+ 生物信息学工具**（MAFFT、MMseqs2、CD-HIT、AutoDock Vina、Open Babel、P2Rank、Foldseek、TM-align、PyMOL、FastTree、ETE、OmegaFold、ESMFold 等），无需手动安装。
+
+```bash
+git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
+cd miniprot_virtual_lab
+
+# 1. 配置
+cp config/settings.example.yaml config/settings.yaml
+# 编辑 settings.yaml — 填入 API Key
+
+# 2. 构建镜像（首次约 10 分钟，约 4 GB）
+docker-compose build
+
+# 3. 运行演示
+docker-compose run --rm miniprot-vlab python run.py --demo
+
+# 4. 交互模式
+docker-compose run --rm miniprot-vlab
+```
+
+### 方式 B：手动安装
 
 ```bash
 git clone https://github.com/SJTU-software-2026/enzyme_update.git
-git clone https://github.com/<your-org>/miniprot_virtual_lab.git
+git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
 
 cd enzyme_update && pip install -r requirements.txt
 cd ../miniprot_virtual_lab && pip install -r requirements.txt
@@ -406,6 +428,54 @@ run_meeting(
     ...
 )
 ```
+
+---
+
+## 工具二进制文件 — 三种获取方式
+
+许多工具需要外部二进制文件（MAFFT、Vina、P2Rank 等），你有**三种选择**：
+
+### 方式 1：Docker（最简单，全部预装）
+
+```bash
+docker-compose build && docker-compose run --rm miniprot-vlab python run.py --demo
+```
+
+25+ 工具预装，零手动配置。详见上方 [Docker 安装](#安装) 章节。
+
+### 方式 2：使用本地已安装的工具
+
+如果你电脑上已有 MAFFT、Vina、P2Rank 等工具，告诉 MiniProt 它们的位置即可：
+
+```bash
+cp config/tool_paths.example.yaml config/tool_paths.yaml
+# 编辑 tool_paths.yaml —— 填入本地工具路径
+```
+
+程序会自动检测 `config/tool_paths.yaml`。只配置你有的工具，其余回退到 PATH/Docker。
+
+### 方式 3：下载到 `tools_src/`（项目内，git 忽略）
+
+将工具直接下载到项目的 `tools_src/` 目录：
+
+```
+tools_src/                         ← 已被 gitignore（不会提交）
+├── p2rank/
+│   └── p2rank_2.5.1/              ← 下载自 https://github.com/rdk/p2rank/releases
+├── omegafold/                     ← git clone https://github.com/HeliXonProtein/OmegaFold
+└── java/
+    └── jdk-17/                    ← 下载自 https://adoptium.net/download/
+```
+
+然后编辑 `config/tool_paths.yaml` 指向这些本地路径。`tools_src/` 已在 `.gitignore` 中，大文件（~700MB+）永远不会被提交到 git。
+
+| 工具 | 大小 | 下载方式 |
+|------|------|---------|
+| P2Rank | ~260 MB | `wget https://github.com/rdk/p2rank/releases/download/2.5.1/p2rank_2.5.1.tar.gz` |
+| OmegaFold | ~5 MB (git) | `git clone https://github.com/HeliXonProtein/OmegaFold.git` |
+| OpenJDK 17 | ~180 MB | https://adoptium.net/download/ |
+
+> **提示：** 你也可以把工具装到系统任意位置（如 `C:\tools\`、`/opt/bioinf/`），通过 `tool_paths.yaml` 引用即可 —— 无需放在项目目录内。
 
 ---
 

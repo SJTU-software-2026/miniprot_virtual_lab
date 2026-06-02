@@ -45,8 +45,9 @@ MODEL_TO_OUTPUT_PRICE_PER_TOKEN = {
 }
 
 # ── Tool Categories ────────────────────────────────────────────────
-# Each specialist agent gets one category of tools.
+# Each specialist agent gets one or more categories of tools.
 # Tool IDs match those registered in enzyme_update's ToolManager.
+# Also documented in tools/TOOL_GUIDE.md and tools/<category>/__init__.py.
 
 TOOL_CATEGORIES = {
     "search": [
@@ -59,6 +60,10 @@ TOOL_CATEGORIES = {
         "structure_from_fasta",
         "omegafold",
         "esmfold",
+        "foldseek",
+        "tmalign",
+        "structure_alignment_batch",
+        "similarity_matrix",
     ],
     "chemistry": [
         "smiles",
@@ -78,22 +83,19 @@ TOOL_CATEGORIES = {
         "sequence_similarity",
         "protein_properties",
         "fasta_convert",
-    ],
-    "structure_analysis": [
-        "foldseek",
-        "tmalign",
-        "structure_alignment_batch",
-        "similarity_matrix",
+        "ete",
     ],
     "visualization": [
         "pymol",
-        "ete",
     ],
     "utility": [
         "pdb_merge",
         "merger",
     ],
 }
+
+# Kept for backward compatibility — "structure_analysis" now merged into "structure"
+TOOL_CATEGORIES["structure_analysis"] = TOOL_CATEGORIES["structure"]
 
 # Flattened set of all tool IDs for validation
 ALL_TOOL_IDS = set()

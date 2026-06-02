@@ -57,7 +57,11 @@ from .prompts import (
 )
 from .run_meeting import run_meeting, load_meeting_context, list_saved_meetings
 from .constants import ENZYME_MINING_REFERENCE_WORKFLOW
-from .tools import ToolBridge, get_bridge
+from .tools import (
+    ToolBridge, get_bridge,
+    TOOL_REGISTRY, CATEGORY_MAP, TOOL_STATUS,
+    load_tool_paths, get_tool_path, print_tool_paths, TOOL_PATHS,
+)
 
 __all__ = [
     # Core
@@ -86,6 +90,13 @@ __all__ = [
     # Tools
     "ToolBridge",
     "get_bridge",
+    "TOOL_REGISTRY",
+    "CATEGORY_MAP",
+    "TOOL_STATUS",
+    "load_tool_paths",
+    "get_tool_path",
+    "print_tool_paths",
+    "TOOL_PATHS",
     # Reference
     "ENZYME_MINING_REFERENCE_WORKFLOW",
 ]

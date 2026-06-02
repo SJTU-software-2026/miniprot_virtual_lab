@@ -1,0 +1,60 @@
+# =============================================================================
+#  MiniProt Virtual Lab — Docker Compose
+#  =============================================================================
+#
+#  Quick start:
+#    1. cp config/settings.example.yaml config/settings.yaml
+#    2. Edit config/settings.yaml — add your API key
+#    3. docker-compose run --rm miniprot-vlab python run.py --demo
+#
+#  Interactive mode:
+#    docker-compose run --rm miniprot-vlab
+#
+#  Build without cache:
+#    docker-compose build --no-cache
+# =============================================================================
+
+version: "3.8"
+
+services:
+  miniprot-vlab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: miniprot-vlab:latest
+    container_name: miniprot_vlab
+
+    # API key — set in .env file or here
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - MINIPROT_PROVIDER=${MINIPROT_PROVIDER:-deepseek}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-pro}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-}
+      - ENZYME_UPDATE_SRC=/app/enzyme_update/src
+      - PYTHONUNBUFFERED=1
+
+    # Mount volumes for persistent data
+    volumes:
+      # Configuration (edit on host, read in container)
+      - ./config/settings.yaml:/app/config/settings.yaml:ro
+      # Runtime data (persisted on host)
+      - ./data:/app/data
+      - ./meetings:/app/meetings
+      - ./logs:/app/logs
+      # enzyme_update — mount from host
+      - ${ENZYME_UPDATE_PATH:-../enzyme_update}:/app/enzyme_update:ro
+
+    # Interactive terminal
+    stdin_open: true
+    tty: true
+
+    # Override command as needed:
+    # command: python run.py --demo
+    # command: python run.py --agenda "Find insulin proteins"
+
+    networks:
+      - miniprot-net
+
+networks:
+  miniprot-net:
+    driver: bridge

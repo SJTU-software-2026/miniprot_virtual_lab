@@ -19,10 +19,10 @@ env/
 *.swo
 *~
 
-# ── Configuration with real secrets ────────────────────────────────
-# settings.yaml may contain real API keys — keep it out of git.
-# Users should copy settings.example.yaml → settings.yaml and edit.
+# ── Configuration with real secrets / local paths ──────────────────
+# Users should copy *.example.yaml → *.yaml and edit.
 config/settings.yaml
+config/tool_paths.yaml
 
 # ── Data generated at runtime ──────────────────────────────────────
 data/
@@ -40,3 +40,6 @@ desktop.ini
 
 # ── Jupyter ────────────────────────────────────────────────────────
 .ipynb_checkpoints/
+
+# ── Downloaded tool sources (reference only) ───────────────────────
+tools_src/
