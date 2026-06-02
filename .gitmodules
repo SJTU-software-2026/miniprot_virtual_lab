@@ -1,0 +1,3 @@
+[submodule "tools_src/omegafold"]
+	path = tools_src/omegafold
+	url = git@github.com:HeliXonProtein/OmegaFold.git

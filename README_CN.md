@@ -435,6 +435,24 @@ run_meeting(
 
 许多工具需要外部二进制文件（MAFFT、Vina、P2Rank 等），你有**三种选择**：
 
+### 方式 0：克隆仓库（可选下载工具）
+
+```bash
+# 仅克隆代码（快速，~1 MB）
+git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
+
+# 获取 OmegaFold 子模块（可选）
+git submodule update --init tools_src/omegafold
+
+# 下载其他工具（可选 — P2Rank、Java）
+# Linux/macOS:
+bash scripts/setup_tools.sh
+# Windows:
+powershell -File scripts/setup_tools.ps1
+```
+
+> **工具由你选择下载。** 核心项目约 1 MB。大文件通过 submodule 和安装脚本按需获取，不会进入主仓库。
+
 ### 方式 1：Docker（最简单，全部预装）
 
 ```bash
