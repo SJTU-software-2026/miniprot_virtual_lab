@@ -1,0 +1,291 @@
+# =============================================================================
+#  EXAMPLE CONFIGURATION — Copy this file to settings.yaml and edit it.
+#  示例配置文件 — 复制此文件为 settings.yaml 并编辑。
+#
+#  cp config/settings.example.yaml config/settings.yaml
+#  Then fill in your API keys in the new settings.yaml.
+#  然后在新的 settings.yaml 中填入你的 API Key。
+# =============================================================================
+
+# =============================================================================
+#  MiniProt Virtual Lab — User Configuration
+#  =============================================================================
+#
+#  This is the PRIMARY configuration file. Edit it to set your API keys,
+#  choose an AI provider, and optionally give each agent its own model/key.
+#
+#  这是主配置文件。编辑此文件来设置 API Key、选择 AI 提供商，
+#  以及（可选地）为每个智能体指定独立的模型和 API Key。
+#
+#  Resolution order (highest to lowest) / 配置优先级（从高到低）:
+#    1. Agent attribute in Python code  (代码中显式设置的智能体属性)
+#    2. Environment variable             (环境变量 MINIPROT_*)
+#    3. THIS FILE  (config/settings.yaml)  ← 你正在编辑的文件
+#    4. Provider preset                  (提供商预设，由 provider 字段选择)
+#    5. Hard-coded default               (代码默认值: DeepSeek V4)
+#
+#  Tip: You can override ANY setting here with an environment variable.
+#  提示: 你可以用环境变量覆盖本文件中的任意配置。
+# =============================================================================
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  GLOBAL SETTINGS  /  全局设置
+# ─────────────────────────────────────────────────────────────────────────────
+
+global:
+
+  # --- AI Provider selection / AI 提供商选择 ---
+  #
+  # Built-in presets / 内置预设:
+  #   deepseek      DeepSeek V4 Pro (官方 API)
+  #   deepseek-v3   DeepSeek V3 / Chat (官方 API, 更快更便宜)
+  #   sjtu          SJTU models server (上海交大模型服务器)
+  #   openai        OpenAI GPT-5.2 (官方 API)
+  #   openai-mini   OpenAI GPT-5 Mini (更便宜)
+  #   custom        自定义 OpenAI 兼容端点
+  #
+  # You can also set MINIPROT_PROVIDER env var to override.
+  # 也可以通过环境变量 MINIPROT_PROVIDER 覆盖。
+  provider: deepseek
+
+  # --- API Key / API 密钥 ---
+  #
+  # For DeepSeek:   get your key at https://platform.deepseek.com/api_keys
+  # For OpenAI:     get your key at https://platform.openai.com/api_keys
+  # For SJTU:       contact your server administrator
+  #
+  # SECURITY: Do NOT commit your real API key to git!
+  #           请勿将真实 API Key 提交到 git！
+  #           Use an environment variable instead:
+  #           export DEEPSEEK_API_KEY="sk-your-key-here"
+  #
+  # Leave empty ("") to use the DEEPSEEK_API_KEY or OPENAI_API_KEY env var.
+  # 留空 ("") 则使用 DEEPSEEK_API_KEY 或 OPENAI_API_KEY 环境变量。
+  api_key: ""
+
+  # --- Model name / 模型名称 ---
+  #
+  # This is the default model used by all agents unless overridden below.
+  # 这是所有智能体默认使用的模型，可在下方为单个智能体覆盖。
+  #
+  # Common choices / 常用选择:
+  #   deepseek-v4-pro   (最强推理能力)
+  #   deepseek-chat     (DeepSeek V3, 快速便宜)
+  #   gpt-5.2           (OpenAI 最新)
+  #   gpt-5-mini        (OpenAI 轻量)
+  model: deepseek-v4-pro
+
+  # --- API base URL / API 基础地址 ---
+  #
+  # Only set this if using a custom provider or proxy.
+  # 仅在使用自定义提供商或代理时设置。
+  # Leave empty ("") to auto-detect from the provider preset.
+  # 留空 ("") 则从提供商预设自动获取。
+  base_url: ""
+
+  # --- Extra API parameters / 额外 API 参数 ---
+  #
+  # For DeepSeek reasoning/thinking mode, set:
+  #   extra_body:
+  #     thinking:
+  #       type: enabled
+  #
+  # Or set DEEPSEEK_THINKING_ENABLED=true as an env var.
+  # 或设置环境变量 DEEPSEEK_THINKING_ENABLED=true。
+  extra_body: {}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  MEETING SETTINGS  /  会议设置
+# ─────────────────────────────────────────────────────────────────────────────
+
+meeting:
+
+  # Default number of discussion rounds for team meetings.
+  # 团队会议的默认讨论轮数。
+  default_team_rounds: 3
+
+  # Default number of critique rounds for individual meetings.
+  # 单独会议中审稿人审查的默认轮数。
+  default_individual_rounds: 2
+
+  # Default temperature for creative discussion (team meetings).
+  # 创意讨论（团队会议）的默认 temperature。
+  creative_temperature: 0.7
+
+  # Default temperature for precise tool execution (individual meetings).
+  # 精确工具执行（单独会议）的默认 temperature。
+  precise_temperature: 0.2
+
+  # Maximum characters of a tool result to pass back to the LLM context.
+  # 工具结果传回 LLM 上下文的最大字符数。
+  max_tool_result_chars: 4000
+
+  # Maximum tool calls a single agent can make in one meeting.
+  # 单个智能体在一次会议中可调用的最大工具次数。
+  max_tool_calls: 15
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  PER-AGENT OVERRIDES  /  单智能体覆盖配置
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#  Each agent can use a DIFFERENT API key and model. This is important for
+#  prompt-cache performance: since each agent has a unique system prompt,
+#  separate API keys isolate their cache namespaces → higher cache hit rates.
+#
+#  每个智能体可以使用不同的 API Key 和模型。这对提示缓存性能很重要：
+#  每个智能体的系统提示词都不同，独立的 API Key 可以隔离缓存命名空间，
+#  从而提高缓存命中率。
+#
+#  To isolate an agent, fill in api_key and/or model below.
+#  要给某智能体独立配置，填写下方的 api_key 和/或 model。
+#
+#  Agent names (for YAML keys) / 智能体名称（YAML 键名）:
+#    principal_investigator      首席研究员 (PI)
+#    scientific_critic           科学审稿人
+#    protein_search_specialist   蛋白质搜索专家
+#    structure_specialist        结构专家
+#    chemistry_specialist        化学专家
+#    docking_specialist          对接专家
+#    sequence_analysis_specialist 序列分析专家
+#
+#  You can also use env vars: MINIPROT_<AGENT>_API_KEY, MINIPROT_<AGENT>_MODEL.
+#  也可以使用环境变量: MINIPROT_<AGENT>_API_KEY, MINIPROT_<AGENT>_MODEL。
+# ─────────────────────────────────────────────────────────────────────────────
+
+agents:
+
+  # --- Principal Investigator (首席研究员) ---
+  # Coordinates the team, synthesizes discussion, assigns tasks.
+  # Use a strong reasoning model for this role.
+  principal_investigator:
+    api_key: ""           # Leave empty to use global / 留空使用全局配置
+    # model: ""             # e.g. "deepseek-v4-pro" for best reasoning
+    # base_url: ""          # Override API endpoint / 覆盖 API 端点
+    temperature: 0.7        # Higher = more creative discussion
+
+  # --- Scientific Critic (科学审稿人) ---
+  # Reviews outputs for correctness. Can use a cheaper model.
+  scientific_critic:
+    api_key: ""
+    # model: ""             # e.g. "deepseek-chat" for cost savings
+    # base_url: ""
+    temperature: 0.2        # Lower = more precise review
+
+  # --- Protein Search Specialist (蛋白质搜索专家) ---
+  # UniProt, NCBI searches. Moderate reasoning needed.
+  protein_search_specialist:
+    api_key: ""
+    # model: ""
+    # base_url: ""
+    temperature: 0.2
+
+  # --- Structure Specialist (结构专家) ---
+  # AlphaFold, PDB, Foldseek. Needs good spatial reasoning.
+  structure_specialist:
+    api_key: ""
+    # model: ""
+    # base_url: ""
+    temperature: 0.2
+
+  # --- Chemistry Specialist (化学专家) ---
+  # SMILES, PubChem. Lightweight tasks.
+  chemistry_specialist:
+    api_key: ""
+    # model: ""
+    # base_url: ""
+    temperature: 0.2
+
+  # --- Docking Specialist (对接专家) ---
+  # AutoDock Vina, P2Rank. Precision-critical.
+  docking_specialist:
+    api_key: ""
+    # model: ""
+    # base_url: ""
+    temperature: 0.2
+
+  # --- Sequence Analysis Specialist (序列分析专家) ---
+  # MAFFT, HMMER, phylogenetic trees. Computationally intensive reasoning.
+  sequence_analysis_specialist:
+    api_key: ""
+    # model: ""
+    # base_url: ""
+    temperature: 0.2
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  LOGGING SETTINGS  /  日志设置
+# ─────────────────────────────────────────────────────────────────────────────
+
+logging:
+
+  # Directory for structured run logs. A timestamped subdirectory is
+  # created inside this for each run.
+  # 结构化运行日志的目录。每次运行会在其中创建带时间戳的子目录。
+  log_dir: logs
+
+  # Console log level: DEBUG, INFO, WARNING, ERROR
+  # 控制台日志级别
+  console_level: WARNING
+
+  # File log level (always more detailed than console)
+  # 文件日志级别（通常比控制台更详细）
+  file_level: DEBUG
+
+  # Save API call trace as JSON (api_calls.json)
+  # 是否保存 API 调用追踪为 JSON
+  save_api_trace: true
+
+  # Save tool execution trace as JSON (tools.json)
+  # 是否保存工具执行追踪为 JSON
+  save_tool_trace: true
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  OUTPUT SETTINGS  /  输出设置
+# ─────────────────────────────────────────────────────────────────────────────
+
+output:
+
+  # Directory for meeting discussion files (JSON + Markdown)
+  # 会议讨论文件的目录（JSON + Markdown）
+  meetings_dir: meetings
+
+  # Directory for tool output files (FASTA, PDB, docking results, etc.)
+  # 工具输出文件的目录（FASTA, PDB, 对接结果等）
+  data_dir: data/outputs
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  EXAMPLE: Full isolation setup / 完整隔离配置示例
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#  Below is an example where every agent uses its own API key for maximum
+#  cache isolation. Uncomment and fill in your keys to use.
+#  以下是每个智能体使用独立 API Key 的完整示例。取消注释并填入 Key 即可使用。
+#
+#  global:
+#    provider: deepseek
+#    model: deepseek-v4-pro
+#    api_key: "sk-global-fallback"   # Used by agents without their own key
+#
+#  agents:
+#    principal_investigator:
+#      api_key: "sk-pi-xxxx"         # PI gets strongest model
+#      model: deepseek-v4-pro
+#    scientific_critic:
+#      api_key: "sk-critic-xxxx"     # Critic uses cheap model
+#      model: deepseek-chat
+#    protein_search_specialist:
+#      api_key: "sk-search-xxxx"
+#    structure_specialist:
+#      api_key: "sk-structure-xxxx"
+#    chemistry_specialist:
+#      api_key: "sk-chemistry-xxxx"
+#    docking_specialist:
+#      api_key: "sk-docking-xxxx"
+#    sequence_analysis_specialist:
+#      api_key: "sk-seq-xxxx"
+# =============================================================================

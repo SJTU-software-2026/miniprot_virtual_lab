@@ -1,0 +1,42 @@
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ───────────────────────────────────────────
+venv/
+.venv/
+env/
+.env
+
+# ── IDE / Editor ───────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Configuration with real secrets ────────────────────────────────
+# settings.yaml may contain real API keys — keep it out of git.
+# Users should copy settings.example.yaml → settings.yaml and edit.
+config/settings.yaml
+
+# ── Data generated at runtime ──────────────────────────────────────
+data/
+
+# ── Meeting records (contain user research data) ───────────────────
+meetings/
+
+# ── Structured logs (contain API keys in traces) ───────────────────
+logs/
+
+# ── OS files ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Jupyter ────────────────────────────────────────────────────────
+.ipynb_checkpoints/

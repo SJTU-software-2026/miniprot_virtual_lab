@@ -1,0 +1,31 @@
+# MiniProt Virtual Lab — Dependencies
+# =====================================
+
+# Core: LLM client (OpenAI-compatible; works with DeepSeek, OpenAI, etc.)
+openai>=1.0.0
+python-dotenv>=1.0.0
+
+# YAML configuration file support (for config/settings.yaml)
+pyyaml>=6.0
+
+# Token counting (optional; falls back to char/4 estimate)
+tiktoken>=0.5.0
+
+# Progress bars
+tqdm>=4.66.0
+
+# Architecture diagram generation (optional)
+matplotlib>=3.7.0
+
+# ── MiniProt tools (from enzyme_update) ──────────────────────────
+# Required for tool execution in individual meetings.
+# Install in the same environment:
+#
+#   pip install -r ../enzyme_update/requirements.txt
+#
+# Key dependencies include:
+#   langchain-core>=0.3.0, langchain-openai>=0.2.0, langgraph>=0.2.0
+#   biopython>=1.81, rdkit>=2024.03.1, numpy, pandas, scipy
+#   pdbfixer, openmm, meeko>=0.5.0
+#   streamlit>=1.28.0, sentence-transformers, chromadb
+#   torch>=2.0.0, transformers>=4.30.0
