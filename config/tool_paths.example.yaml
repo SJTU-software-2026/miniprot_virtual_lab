@@ -1,0 +1,139 @@
+# =============================================================================
+#  MiniProt Virtual Lab — Local Tool Paths
+#  本地工具路径配置
+# =============================================================================
+#
+#  If you ALREADY have these tools installed on your system, set their paths
+#  here to avoid re-downloading or using Docker. Leave empty ("") to use:
+#    - Docker image's built-in tools (if running in Docker)
+#    - conda environment's PATH (if running locally with conda)
+#    - system PATH (fallback)
+#
+#  如果你已经在本地安装了这些工具，在这里设置路径即可，无需 Docker 重装。
+#  留空 ("") 则自动使用 Docker 内置工具 / conda 环境 / 系统 PATH。
+#
+#  Usage / 用法:
+#    cp config/tool_paths.example.yaml config/tool_paths.yaml
+#    # Edit tool_paths.yaml — fill in paths to your local installations
+#    # 编辑 tool_paths.yaml — 填入本地安装路径
+#
+#  The program auto-detects config/tool_paths.yaml at startup.
+#  程序启动时自动检测 config/tool_paths.yaml。
+# =============================================================================
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SEQUENCE ANALYSIS TOOLS  /  序列分析工具
+# ─────────────────────────────────────────────────────────────────────────────
+sequence:
+  # MAFFT — Multiple sequence alignment
+  # Download: conda install -c bioconda mafft
+  # Site:     https://mafft.cbrc.jp/alignment/software/
+  mafft: ""
+
+  # MMseqs2 — Ultra-fast sequence search & clustering
+  # Download: conda install -c bioconda mmseqs2
+  # Site:     https://github.com/soedinglab/MMseqs2
+  mmseqs: ""
+
+  # CD-HIT — Sequence clustering by identity
+  # Download: conda install -c bioconda cd-hit
+  # Site:     https://github.com/weizhongli/cdhit
+  cdhit: ""
+
+  # HMMER (local) — If you prefer local hmmer over EBI API
+  # Download: conda install -c bioconda hmmer
+  # Site:     http://hmmer.org/
+  hmmer_bin_dir: ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  STRUCTURE TOOLS  /  结构工具
+# ─────────────────────────────────────────────────────────────────────────────
+structure:
+  # Foldseek — Structure search & alignment
+  # Download: conda install -c bioconda foldseek
+  # Site:     https://github.com/steineggerlab/foldseek
+  foldseek: ""
+
+  # TM-align — Pairwise structure alignment
+  # Download: conda install -c bioconda tmalign
+  # Site:     https://zhanggroup.org/TM-align/
+  tmalign: ""
+
+  # OmegaFold — De novo structure prediction (needs Python 3.8-3.10)
+  # Download: pip install git+https://github.com/HeliXonProtein/OmegaFold.git
+  # Site:     https://github.com/HeliXonProtein/OmegaFold
+  omega_fold_python: ""       # Path to Python 3.10 interpreter for OmegaFold
+                              # e.g. /opt/conda/envs/omegafold/bin/python
+
+  # ESMFold — Structure prediction via HuggingFace
+  # Download: pip install transformers torch
+  # Site:     https://github.com/facebookresearch/esm
+  esmfold_device: ""          # "cuda:0" for GPU, "cpu" for CPU (default: auto)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DOCKING TOOLS  /  分子对接工具
+# ─────────────────────────────────────────────────────────────────────────────
+docking:
+  # AutoDock Vina — Molecular docking
+  # Download: conda install -c conda-forge vina
+  # Site:     https://github.com/ccsb-scripps/AutoDock-Vina
+  vina: ""
+
+  # Open Babel — Molecular format conversion
+  # Download: conda install -c conda-forge openbabel
+  # Site:     https://github.com/openbabel/openbabel
+  obabel: ""
+
+  # Meeko — PDBQT preparation for Vina
+  # Download: conda install -c conda-forge meeko
+  # Site:     https://github.com/forlilab/Meeko
+  meeko_python: ""
+
+  # PDBFixer — PDB repair (OpenMM)
+  # Download: pip install pdbfixer
+  pdbfixer_python: ""
+
+  # P2Rank — ML-based binding pocket prediction
+  # Download: https://github.com/rdk/p2rank/releases (unzip, no install)
+  # Site:     https://github.com/rdk/p2rank
+  p2rank_home: ""             # Directory containing prank script
+                              # e.g. /opt/p2rank/p2rank_2.5.1
+  java_home: ""               # Java 17+ for P2Rank
+                              # e.g. /usr/lib/jvm/java-17-openjdk
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  VISUALIZATION & PHYLOGENETICS  /  可视化与系统发育
+# ─────────────────────────────────────────────────────────────────────────────
+visualization:
+  # PyMOL — Protein structure visualization
+  # Download: conda install -c schrodinger pymol-bundle (open-source)
+  #         or pip install pymol (older, limited)
+  # Site:     https://pymol.org/
+  pymol: ""
+
+  # FastTree — Approximate maximum-likelihood phylogenetic trees
+  # Download: conda install -c bioconda fasttree
+  # Site:     http://www.microbesonline.org/fasttree/
+  fasttree: ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SPECIALIZED TOOLS  /  专用工具
+# ─────────────────────────────────────────────────────────────────────────────
+specialized:
+  # EnzymeCAGE — Reaction → enzyme ranking (SJTU internal)
+  # Requires separate conda environment.
+  enzymecage_python: ""       # Path to EnzymeCAGE conda env python
+
+  # Enzyme specificity prediction model checkpoint
+  enzyme_checkpoint: ""       # Path to .ckpt file for enzyme_specificity_predict
+                              # e.g. /data/models/enzyme_specificity.ckpt
+
+  # SCWRL4 — Side-chain optimization (academic license required)
+  # Download: https://dunbrack.fccc.edu/lab/scwrl (fill license form)
+  scwrl4: ""                  # Path to Scwrl4 binary
+                              # e.g. /opt/scwrl4/Scwrl4

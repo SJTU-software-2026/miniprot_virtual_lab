@@ -109,11 +109,35 @@ Human Researcher
 
 ## Installation
 
-### 1. Clone & setup
+### Option A: Docker (recommended — all tools pre-installed)
+
+The Docker image includes Python 3.12 + **25+ bioinformatics tools** (MAFFT, MMseqs2, CD-HIT, AutoDock Vina, Open Babel, P2Rank, Foldseek, TM-align, PyMOL, FastTree, ETE, OmegaFold, ESMFold, etc.) — no manual tool installation needed.
+
+```bash
+git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
+cd miniprot_virtual_lab
+
+# 1. Configure
+cp config/settings.example.yaml config/settings.yaml
+# Edit settings.yaml — add your API key(s)
+
+# 2. Build image (~10 min first time, ~4 GB)
+docker-compose build
+
+# 3. Run demo
+docker-compose run --rm miniprot-vlab python run.py --demo
+
+# 4. Interactive mode
+docker-compose run --rm miniprot-vlab
+```
+
+See [Docker Setup](#docker-setup) below for detailed configuration.
+
+### Option B: Manual install (Python-only, tools optional)
 
 ```bash
 git clone https://github.com/SJTU-software-2026/enzyme_update.git
-git clone https://github.com/<your-org>/miniprot_virtual_lab.git
+git clone https://github.com/SJTU-software-2026/miniprot_virtual_lab.git
 
 cd enzyme_update && pip install -r requirements.txt
 cd ../miniprot_virtual_lab && pip install -r requirements.txt
@@ -139,6 +163,79 @@ export DEEPSEEK_API_KEY="your_key_here"
 ```bash
 python run.py --providers     # List available AI providers
 python run.py --demo          # Run demo pipeline
+```
+
+---
+
+## Docker Setup
+
+The Docker image bundles **everything** — no need to install tools manually.
+
+### Included tools
+
+| Category | Tools available in Docker |
+|----------|--------------------------|
+| **Search** | `uniprot_search`, `ncbi_search` |
+| **Structure** | `alphafold`, `pdb`, `structure_from_fasta`, `foldseek`, `tmalign`, `omegafold`, `esmfold`, `structure_alignment_batch`, `similarity_matrix` |
+| **Chemistry** | `smiles` |
+| **Docking** | `autodock_vina`, `pocket_picker` (P2Rank), `pocket_box`, `pdb_repair` |
+| **Sequence** | `sequence_alignment` (MAFFT), `hmmer`, `mmseqs2`, `cdhit`, `sequence_length_filter`, `protein_properties`, `fasta_convert` |
+| **Visualization** | `pymol`, `ete` |
+| **Utility** | `merger`, `pdb_merge` |
+
+### Not in Docker (require separate setup)
+
+| Tool | Reason |
+|------|--------|
+| `enzyme_specificity_predict` | Needs trained `.ckpt` model file |
+| `enzymecage_retrieve` | Needs separate EnzymeCAGE conda env |
+| `enzyme_redesign` | Needs SCWRL4 license |
+
+### Environment variables
+
+Create a `.env` file or set in your shell:
+
+```bash
+DEEPSEEK_API_KEY="sk-your-key-here"
+MINIPROT_PROVIDER=deepseek        # deepseek | openai | sjtu
+ENZYME_UPDATE_PATH=../enzyme_update   # path to cloned enzyme_update
+```
+
+### Volume mounts
+
+| Host path | Container path | Purpose |
+|-----------|---------------|---------|
+| `./config/settings.yaml` | `/app/config/settings.yaml` | Configuration (read-only) |
+| `./data/` | `/app/data/` | Tool outputs (FASTA, PDB, docking) |
+| `./meetings/` | `/app/meetings/` | Meeting records |
+| `./logs/` | `/app/logs/` | Structured logs |
+| `../enzyme_update/` | `/app/enzyme_update/` | MiniProt tool implementations |
+
+### Useful commands
+
+```bash
+# Build
+docker-compose build --no-cache
+
+# Demo
+docker-compose run --rm miniprot-vlab python run.py --demo
+
+# Interactive
+docker-compose run --rm miniprot-vlab
+
+# One-off meeting with context
+docker-compose run --rm miniprot-vlab python run.py \
+  --agenda "Find insulin structures" \
+  --provider deepseek
+
+# List providers
+docker-compose run --rm miniprot-vlab python run.py --providers
+
+# Shell into container
+docker-compose run --rm miniprot-vlab bash
+
+# Generate architecture diagrams (inside container)
+docker-compose run --rm miniprot-vlab python scripts/draw_architecture.py
 ```
 
 ---
@@ -429,6 +526,54 @@ run_meeting(
 - Injects them into the new meeting's prompt via `summaries` and `contexts`
 - Agents see the prior discussion and can reference decisions, file paths, and results
 - `list_saved_meetings()` shows all available meeting files with agent lists and turn counts
+
+---
+
+## Tool Binaries — Three Options
+
+Many tools need external binaries (MAFFT, Vina, P2Rank, etc.). You have **three options** — pick what fits your setup:
+
+### Option 1: Docker (simplest — everything included)
+
+```bash
+docker-compose build && docker-compose run --rm miniprot-vlab python run.py --demo
+```
+
+25+ tools pre-installed. Zero manual setup. See [Docker Setup](#docker-setup).
+
+### Option 2: Local installations (use what you already have)
+
+If you already have MAFFT, Vina, P2Rank, etc. on your machine, tell MiniProt where they are:
+
+```bash
+cp config/tool_paths.example.yaml config/tool_paths.yaml
+# Edit tool_paths.yaml — fill in paths to your binaries
+```
+
+The program auto-detects `config/tool_paths.yaml`. Each tool entry includes its download URL for reference. Only configured paths are used — everything else falls back to PATH/Docker.
+
+### Option 3: Download to `tools_src/` (projects local, git-ignored)
+
+Download tool binaries directly into the project's `tools_src/` directory:
+
+```
+tools_src/                         ← gitignored (not in repo)
+├── p2rank/
+│   └── p2rank_2.5.1/              ← from https://github.com/rdk/p2rank/releases
+├── omegafold/                     ← git clone https://github.com/HeliXonProtein/OmegaFold
+└── java/
+    └── jdk-17/                    ← from https://adoptium.net/download/
+```
+
+Then point `config/tool_paths.yaml` to these local paths. The `tools_src/` directory is in `.gitignore` — these large files (~700MB+) will never be committed.
+
+| Tool | Download Size | Source |
+|------|-------------|--------|
+| P2Rank | ~260 MB | `wget https://github.com/rdk/p2rank/releases/download/2.5.1/p2rank_2.5.1.tar.gz` |
+| OmegaFold | ~5 MB (git) | `git clone https://github.com/HeliXonProtein/OmegaFold.git` |
+| OpenJDK 17 | ~180 MB | https://adoptium.net/download/ |
+
+> **Note:** You can also install these tools anywhere on your system (e.g., `C:\tools\`, `/opt/bioinf/`) and reference them via `tool_paths.yaml` — no need to put them inside the project.
 
 ---
 
