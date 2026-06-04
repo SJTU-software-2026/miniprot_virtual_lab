@@ -97,7 +97,7 @@ class EnzymeRedesignTool(BaseTool):
         }
 
     def execute(self, **kwargs: Any) -> Dict[str, Any]:
-        from workflows.enzyme_redesign.pipeline import EnzymeRedesignPipeline
+        from ..workflows.enzyme_redesign.pipeline import EnzymeRedesignPipeline
 
         enzyme_pdb = Path(kwargs["enzyme_pdb"])
         ligand_sdf = Path(kwargs["ligand_sdf"])

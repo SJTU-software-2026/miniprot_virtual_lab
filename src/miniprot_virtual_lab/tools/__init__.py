@@ -100,9 +100,11 @@ for tid in ("sequence_alignment", "mmseqs2", "cdhit", "foldseek",
     TOOL_STATUS[tid] = "docker"
 
 # Unavailable (needs license, model, or separate env)
-for tid in ("enzyme_specificity_predict", "enzymecage_retrieve",
-            "enzyme_redesign"):
+for tid in ("enzyme_specificity_predict", "enzymecage_retrieve"):
     TOOL_STATUS[tid] = "unavailable"
+
+# Available (tested locally with OpenBabel + Vina)
+TOOL_STATUS["enzyme_redesign"] = "available"
 
 __all__ = [
     "ToolBridge",
