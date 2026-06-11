@@ -37,6 +37,7 @@ from tools.enzyme_specificity_predict_tool import EnzymeSpecificityPredictTool
 from tools.enzymecage_retrieve_tool import EnzymeCAGERetrieveTool
 from tools.miniprot_rag_tool import MiniProtRagTool
 from tools.enzyme_redesign_tool import EnzymeRedesignTool
+from tools.mepam_tool import MepamTool
 from tools.base_tools import BaseTool
 from tools.echo_tool import EchoTool
 
@@ -110,6 +111,7 @@ ToolManager.register("enzyme_specificity_predict", EnzymeSpecificityPredictTool)
 ToolManager.register("enzymecage_retrieve", EnzymeCAGERetrieveTool)
 ToolManager.register("miniprot_rag", MiniProtRagTool)
 ToolManager.register("enzyme_redesign", EnzymeRedesignTool)
+ToolManager.register("mepam", MepamTool)
 ToolManager.register("echo_tool", EchoTool) # For test
 
 def _load_knowledge_graph_hint() -> Optional[str]:

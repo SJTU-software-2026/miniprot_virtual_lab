@@ -34,6 +34,12 @@ TOOLS = {
         "typical_use": "Full redesign workflow: structure prep → mutation design → modeling → docking → ranking.",
         "key_params": "enzyme_pdb, ligand_sdf, work_dir, mutation_strategy, top_n",
     },
+    "mepam": {
+        "description": "Recommend optimal expression host, medium, and fermentation conditions for an enzyme.",
+        "primary_agent": "Principal Investigator",
+        "typical_use": "Given an enzyme name, find best production host and culture conditions.",
+        "key_params": "enzyme, substrate, action, top_k",
+    },
     "echo_tool": {
         "description": "Echo back input text. For testing tool call infrastructure.",
         "primary_agent": "Principal Investigator",
